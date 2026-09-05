@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>HireSphere - Enterprise Job Board Platform</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <style>
+    :root {
+      --bg-color: #0f172a;
+      --card-bg: rgba(30, 41, 59, 0.75);
+      --text-color: #f8fafc;
+      --border-color: rgba(255, 255, 255, 0.15);
+    }
+    [data-theme="light"] {
+      --bg-color: #f8fafc;
+      --card-bg: #ffffff;
+      --text-color: #0f172a;
+      --border-color: #e2e8f0;
+    }
+    body { background-color: var(--bg-color); color: var(--text-color); font-family: 'Segoe UI', system-ui, sans-serif; transition: all 0.3s; }
+    .glass-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 16px; padding: 24px; backdrop-filter: blur(10px); box-shadow: 0 4px 20px rgba(0,0,0,0.15); }
+    .navbar { background: linear-gradient(90deg, #2563eb 0%, #7c3aed 100%); }
+    .btn-gradient { background: linear-gradient(90deg, #2563eb 0%, #a855f7 100%); border: none; color: white; font-weight: bold; }
+    .btn-gradient:hover { opacity: 0.9; color: white; }
+    .job-card { transition: transform 0.2s; border: 1px solid var(--border-color); }
+    .job-card:hover { transform: translateY(-4px); }
+  </style>
+</head>
+<body data-theme="dark">
+
+  <!-- Top Navbar -->
+  <nav class="navbar navbar-dark px-4 mb-4 shadow">
+    <div class="container-fluid d-flex justify-content-between align-items-center">
+      <span class="navbar-brand fw-bold fs-3"><i class="fas fa-briefcase me-2"></i>HireSphere Portal</span>
+      <div class="d-flex align-items-center gap-2">
+        <button class="btn btn-warning fw-bold" data-bs-toggle="modal" data-bs-target="#postJobModal"><i class="fas fa-plus-circle me-1"></i> Post a Job</button>
+        <button class="btn btn-info fw-bold text-white" data-bs-toggle="modal" data-bs-target="#adminModal"><i class="fas fa-user-shield me-1"></i> Admin & Directory</button>
+        <button class="btn btn-light rounded-circle" onclick="toggleTheme()"><i class="fas fa-moon" id="theme-icon"></i></button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container py-4">
+
+    <!-- Search & Filter Bar -->
+    <div class="glass-card mb-5">
+      <h4 class="fw-bold mb-3"><i class="fas fa-search me-2 text-primary"></i>Search & Filter Career Opportunities</h4>
+      <div class="row g-3">
+        <div class="col-md-5">
+          <input type="text" id="filter-search" class="form-control form-control-lg" placeholder="Type Title or Keyword..." onkeyup="loadJobs()">
+        </div>
+        <div class="col-md-3">
+          <select id="filter-cat" class="form-select form-select-lg" onchange="loadJobs()">
+            <option value="">All Categories</option>
+            <option value="Engineering">Engineering</option>
+            <option value="Design">Design</option>
+            <option value="Marketing">Marketing</option>
+          </select>
+        </div>
+        <div class="col-md-2">
+          <select id="filter-type" class="form-select form-select-lg" onchange="loadJobs()">
+            <option value="">All Types</option>
+            <option value="Full-Time">Full-Time</option>
+            <option value="Remote">Remote</option>
+            <option value="Contract">Contract</option>
+          </select>
+        </div>
+        <div class="col-md-2">
+          <button class="btn btn-gradient btn-lg w-100" onclick="loadJobs()"><i class="fas fa-filter me-1"></i> Search</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Candidate Application Tracker -->
+    <div class="glass-card mb-5">
+      <h4 class="fw-bold mb-3"><i class="fas fa-tasks me-2 text-primary"></i>Track My Application Status</h4>
+      <div class="row g-3">
+        <div class="col-md-9"><input type="email" id="track-email" class="form-control" placeholder="Enter candidate email to check updates..."></div>
+        <div class="col-md-3"><button class="btn btn-outline-info w-100 fw-bold" onclick="trackApplications()">Track Applications</button></div>
+      </div>
+      <div id="tracked-apps-list" class="mt-3 row g-3"></div>
+    </div>
+
+    <!-- Job Feed Grid -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h3 class="fw-bold mb-0"><i class="fas fa-list-check me-2 text-primary"></i>Featured Live Jobs</h3>
+      <span class="badge bg-primary fs-6" id="jobs-count-badge">Loading jobs...</span>
+    </div>
+
+    <div id="jobs-list" class="row g-4 mb-5"></div>
+
+  </div>
+
+  <!-- Apply Modal -->
+  <div class="modal fade" id="applyModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered text-dark">
+      <div class="modal-content">
+        <div class="modal-header bg-primary text-white">
+          <h5 class="modal-title fw-bold" id="apply-job-title">Apply for Job</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <form id="applyForm" onsubmit="submitApplication(event)">
+            <input type="hidden" id="apply-job-id">
+            <div class="mb-2"><label class="form-label small fw-bold">Full Name</label><input type="text" id="app-name" class="form-control" required></div>
+            <div class="mb-2"><label class="form-label small fw-bold">Email Address</label><input type="email" id="app-email" class="form-control" required></div>
+            <div class="mb-2"><label class="form-label small fw-bold">Phone Number</label><input type="text" id="app-phone" class="form-control" required></div>
+            <div class="mb-2"><label class="form-label small fw-bold">Cover Letter</label><textarea id="app-cover" class="form-control" rows="3"></textarea></div>
+            <div class="mb-3"><label class="form-label small fw-bold">Upload Resume (PDF/Doc)</label><input type="file" id="app-resume" class="form-control" required></div>
+            <button type="submit" class="btn btn-primary w-100 fw-bold">Submit Application</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Post Job Modal -->
+  <div class="modal fade" id="postJobModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered text-dark">
+      <div class="modal-content">
+        <div class="modal-header bg-warning">
+          <h5 class="modal-title fw-bold"><i class="fas fa-building me-2"></i>Post New Job Listing</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <form id="postJobForm" onsubmit="publishJob(event)">
+            <div class="mb-2"><input type="text" id="job-company" class="form-control" placeholder="Company Name" required></div>
+            <div class="mb-2"><input type="email" id="job-email" class="form-control" placeholder="Company HR Email" required></div>
+            <div class="mb-2"><input type="text" id="job-title" class="form-control" placeholder="Job Title" required></div>
+            <div class="row g-2 mb-2">
+              <div class="col-6">
+                <select id="job-cat" class="form-select" required>
+                  <option value="Engineering">Engineering</option>
+                  <option value="Design">Design</option>
+                  <option value="Marketing">Marketing</option>
+                </select>
+              </div>
+              <div class="col-6">
+                <select id="job-type" class="form-select" required>
+                  <option value="Full-Time">Full-Time</option>
+                  <option value="Remote">Remote</option>
+                  <option value="Contract">Contract</option>
+                </select>
+              </div>
+            </div>
+            <div class="mb-2"><input type="text" id="job-loc" class="form-control" placeholder="Location" required></div>
+            <div class="mb-2"><input type="text" id="job-salary" class="form-control" placeholder="Salary Range" required></div>
+            <div class="mb-3"><textarea id="job-desc" class="form-control" placeholder="Job Description..." rows="3" required></textarea></div>
+            <button type="submit" class="btn btn-warning w-100 fw-bold">Publish Job Now</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Admin & User Directory Modal -->
+  <div class="modal fade" id="adminModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered text-dark">
+      <div class="modal-content">
+        <div class="modal-header bg-info text-white">
+          <h5 class="modal-title fw-bold"><i class="fas fa-chart-line me-2"></i>Admin Dashboard & User Management</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row g-2 text-center mb-4">
+            <div class="col-3"><div class="p-2 border rounded bg-light"><small>Live Jobs</small><h5 class="fw-bold text-primary" id="adm-jobs">0</h5></div></div>
+            <div class="col-3"><div class="p-2 border rounded bg-light"><small>Employers</small><h5 class="fw-bold" id="adm-emp">0</h5></div></div>
+            <div class="col-3"><div class="p-2 border rounded bg-light"><small>Candidates</small><h5 class="fw-bold" id="adm-cand">0</h5></div></div>
+            <div class="col-3"><div class="p-2 border rounded bg-light"><small>Applications</small><h5 class="fw-bold text-success" id="adm-apps">0</h5></div></div>
+          </div>
+
+          <ul class="nav nav-tabs mb-3">
+            <li class="nav-item"><button class="nav-link active fw-bold" data-bs-toggle="tab" data-bs-target="#tab-apps">Applications</button></li>
+            <li class="nav-item"><button class="nav-link fw-bold" data-bs-toggle="tab" data-bs-target="#tab-users">User Directory</button></li>
+          </ul>
+
+          <div class="tab-content">
+            <div class="tab-pane fade show active" id="tab-apps">
+              <div class="table-responsive">
+                <table class="table table-bordered table-sm align-middle small">
+                  <thead class="table-dark">
+                    <tr><th>Candidate</th><th>Job Title</th><th>Resume</th><th>Status</th><th>Update</th></tr>
+                  </thead>
+                  <tbody id="admin-apps-tbody"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="tab-pane fade" id="tab-users">
+              <h6 class="fw-bold text-primary mb-2">Registered Candidates</h6>
+              <div id="users-cand-list" class="mb-3 small"></div>
+              <h6 class="fw-bold text-success mb-2">Registered Employers</h6>
+              <div id="users-emp-list" class="small"></div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    function toggleTheme() {
+      const body = document.body;
+      const icon = document.getElementById('theme-icon');
+      if (body.getAttribute('data-theme') === 'dark') {
+        body.setAttribute('data-theme', 'light');
+        icon.className = 'fas fa-sun';
+      } else {
+        body.setAttribute('data-theme', 'dark');
+        icon.className = 'fas fa-moon';
+      }
+    }
+
+    async function loadJobs() {
+      const search = document.getElementById('filter-search').value;
+      const category = document.getElementById('filter-cat').value;
+      const jobType = document.getElementById('filter-type').value;
+
+      const res = await fetch(`/api/jobs?search=${encodeURIComponent(search)}&category=${encodeURIComponent(category)}&jobType=${encodeURIComponent(jobType)}`);
+      const jobs = await res.json();
+
+      document.getElementById('jobs-count-badge').innerText = `${jobs.length} Available Job(s)`;
+
+      if (jobs.length === 0) {
+        document.getElementById('jobs-list').innerHTML = `<div class="col-12 text-center py-5 text-warning"><h5>No matching jobs found. Try clearing filters!</h5></div>`;
+        return;
+      }
+
+      document.getElementById('jobs-list').innerHTML = jobs.map(j => `
+        <div class="col-md-6">
+          <div class="glass-card job-card h-100 d-flex flex-column justify-content-between">
+            <div>
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="badge bg-primary">${j.category}</span>
+                <span class="badge bg-info text-dark">${j.jobType}</span>
+              </div>
+              <h4 class="fw-bold">${j.title}</h4>
+              <h6 class="text-warning mb-2"><i class="fas fa-building me-1"></i>${j.employerId ? j.employerId.companyName : 'Tech Company'}</h6>
+              <p class="small opacity-75">${j.description}</p>
+              <p class="small mb-1"><i class="fas fa-location-dot me-2"></i>${j.location} | <i class="fas fa-money-bill-wave me-1"></i>${j.salaryRange}</p>
+            </div>
+            <button class="btn btn-gradient mt-3 w-100" onclick="openApplyModal('${j._id}', '${j.title}')"><i class="fas fa-paper-plane me-1"></i>Apply Now</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function openApplyModal(jobId, jobTitle) {
+      document.getElementById('apply-job-id').value = jobId;
+      document.getElementById('apply-job-title').innerText = `Apply for: ${jobTitle}`;
+      new bootstrap.Modal(document.getElementById('applyModal')).show();
+    }
+
+    async function submitApplication(e) {
+      e.preventDefault();
+      const formData = new FormData();
+      formData.append('jobId', document.getElementById('apply-job-id').value);
+      formData.append('fullName', document.getElementById('app-name').value);
+      formData.append('email', document.getElementById('app-email').value);
+      formData.append('phone', document.getElementById('app-phone').value);
+      formData.append('coverLetter', document.getElementById('app-cover').value);
+      formData.append('resume', document.getElementById('app-resume').files[0]);
+
+      const res = await fetch('/api/apply', { method: 'POST', body: formData });
+      if (res.ok) {
+        alert('🎉 Application & Resume Submitted Successfully!');
+        location.reload();
+      }
+    }
+
+    async function publishJob(e) {
+      e.preventDefault();
+      const payload = {
+        companyName: document.getElementById('job-company').value,
+        email: document.getElementById('job-email').value,
+        title: document.getElementById('job-title').value,
+        category: document.getElementById('job-cat').value,
+        jobType: document.getElementById('job-type').value,
+        location: document.getElementById('job-loc').value,
+        salaryRange: document.getElementById('job-salary').value,
+        description: document.getElementById('job-desc').value
+      };
+
+      const res = await fetch('/api/jobs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        alert('🎉 Job Published Successfully!');
+        location.reload();
+      }
+    }
+
+    async function trackApplications() {
+      const email = document.getElementById('track-email').value;
+      if (!email) return alert('Enter email!');
+
+      const res = await fetch(`/api/applications/candidate/${email}`);
+      const apps = await res.json();
+
+      if (apps.length === 0) {
+        document.getElementById('tracked-apps-list').innerHTML = `<p class="text-warning">No applications found for this email.</p>`;
+        return;
+      }
+
+      document.getElementById('tracked-apps-list').innerHTML = apps.map(a => `
+        <div class="col-md-6">
+          <div class="p-3 border rounded bg-dark text-white">
+            <h5 class="fw-bold">${a.jobId ? a.jobId.title : 'Job'}</h5>
+            <p class="small mb-1">Company: ${a.jobId && a.jobId.employerId ? a.jobId.employerId.companyName : 'Tech Enterprise'}</p>
+            <p class="small mb-2">Status: <span class="badge bg-warning text-dark">${a.status}</span></p>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    async function loadAdminData() {
+      const resStats = await fetch('/api/admin/stats');
+      const stats = await resStats.json();
+      document.getElementById('adm-jobs').innerText = stats.totalJobs;
+      document.getElementById('adm-emp').innerText = stats.totalEmployers;
+      document.getElementById('adm-cand').innerText = stats.totalCandidates;
+      document.getElementById('adm-apps').innerText = stats.totalApplications;
+
+      const resApps = await fetch('/api/admin/applications');
+      const apps = await resApps.json();
+      document.getElementById('admin-apps-tbody').innerHTML = apps.map(a => `
+        <tr>
+          <td>${a.candidateId ? a.candidateId.fullName : 'Candidate'}<br><small class="text-muted">${a.candidateId ? a.candidateId.email : ''}</small></td>
+          <td>${a.jobId ? a.jobId.title : 'Job'}</td>
+          <td><a href="/${a.resumePath}" target="_blank" class="btn btn-xs btn-outline-primary btn-sm">Resume</a></td>
+          <td><span class="badge bg-info text-dark">${a.status}</span></td>
+          <td>
+            <select class="form-select form-select-sm" onchange="updateStatus('${a._id}', this.value)">
+              <option value="">Status</option>
+              <option value="Under Review">Under Review</option>
+              <option value="Shortlisted">Shortlisted</option>
+              <option value="Rejected">Rejected</option>
+              <option value="Hired">Hired</option>
+            </select>
+          </td>
+        </tr>
+      `).join('');
+
+      const resUsers = await fetch('/api/admin/users');
+      const users = await resUsers.json();
+      document.getElementById('users-cand-list').innerHTML = users.candidates.map(c => `<div><i class="fas fa-user me-2 text-primary"></i>${c.fullName} (${c.email})</div>`).join('') || 'No candidates registered yet.';
+      document.getElementById('users-emp-list').innerHTML = users.employers.map(e => `<div><i class="fas fa-building me-2 text-success"></i>${e.companyName} (${e.email})</div>`).join('') || 'No employers registered yet.';
+    }
+
+    async function updateStatus(appId, status) {
+      if (!status) return;
+      await fetch(`/api/admin/applications/${appId}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status })
+      });
+      alert('Status Updated Successfully!');
+      loadAdminData();
+    }
+
+    document.getElementById('adminModal').addEventListener('show.bs.modal', loadAdminData);
+
+    loadJobs();
+  </script>
+</body>
+</html>
